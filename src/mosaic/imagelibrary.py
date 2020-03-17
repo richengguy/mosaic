@@ -1,5 +1,6 @@
 import abc
 import pathlib
+import shutil
 
 import click
 import requests
@@ -28,7 +29,7 @@ class ImageLibrary(abc.ABC):
         if not self._libpath.exists():
             self._libpath.mkdir(parents=True, exist_ok=True)
 
-    def download(self, url: str, filename: str):
+    def _download(self, url: str, filename: str) -> pathlib.Path:
         '''Download the contents of the URL to image library folder.
 
         The implementation is based on the one in
@@ -40,6 +41,11 @@ class ImageLibrary(abc.ABC):
             download URL
         filename : str
             name of the downloaded file
+
+        Returns
+        -------
+        pathlib.Path
+            path to the downloaded file
         '''
         path = self._libpath / filename
         click.secho('Downloading: ', bold=True, nl=False)
@@ -47,7 +53,7 @@ class ImageLibrary(abc.ABC):
 
         if path.exists():
             click.echo('File exists...nothing to do.')
-            return
+            return path
 
         with path.open(mode='wb') as f:
             response = requests.get(url, stream=True)
@@ -67,12 +73,44 @@ class ImageLibrary(abc.ABC):
         click.echo('Done...' + click.style('\u2713', fg='green'))
         click.secho('Saved to: ', bold=True, nl=False)
         click.echo(filename)
+        return path
 
 
 class CIFAR100Library(ImageLibrary):
     '''An image library composed of images from the CIFAR-100 dataset.'''
     def __init__(self, folder=pathlib.Path('./libraries')):
         super().__init__('cifar100', folder=folder)
-        self.download(
+        tarball = self._download(
             'http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz',
             'cifar-100-python.tar.gz')
+        self._unpack(tarball)
+
+    def _unpack(self, archive: pathlib.Path) -> pathlib.Path:
+        '''Unpack the archive file at the given path.
+
+        It will be extracted to the library's working directory.
+
+        Parameters
+        ----------
+        archive : pathlib.Path
+            path to the archive file
+
+        Returns
+        -------
+        pathlib.Path
+            path to the extracted archive
+        '''
+        click.secho('Extracting: ', bold=True, nl=False)
+        click.echo(archive.name)
+
+        path = archive.parent / 'cifar-100-python'
+        if path.exists():
+            click.echo('Folder exists...nothing to do.')
+            return path
+
+        shutil.unpack_archive(archive, self._libpath)
+
+        if not path.exists():
+            raise RuntimeError(f'Failed to unpack {archive}.')
+
+        click.echo('Done...' + click.style('\u2713', fg='green', bold=True))
