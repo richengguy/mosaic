@@ -1,10 +1,27 @@
 import abc
+import enum
+import hashlib
 import pathlib
+import pickle
+import secrets
 import shutil
+from typing import Optional, Dict, Tuple
 
 import click
 import requests
 import tqdm
+
+
+@enum.unique
+class HashType(enum.Enum):
+    MD5 = enum.auto()
+    SHA256 = enum.auto()
+
+
+_HASHES = {
+    HashType.MD5: hashlib.md5,
+    HashType.SHA256: hashlib.sha256
+}
 
 
 class ImageLibrary(abc.ABC):
@@ -29,7 +46,8 @@ class ImageLibrary(abc.ABC):
         if not self._libpath.exists():
             self._libpath.mkdir(parents=True, exist_ok=True)
 
-    def _download(self, url: str, filename: str) -> pathlib.Path:
+    def _download(self, url: str, filename: str,
+                  hash: Optional[Tuple[HashType, str]] = None) -> pathlib.Path:
         '''Download the contents of the URL to image library folder.
 
         The implementation is based on the one in
@@ -41,12 +59,18 @@ class ImageLibrary(abc.ABC):
             download URL
         filename : str
             name of the downloaded file
+        hash : (:class:`HashType`, hash)
+            a tuple containing the hash type and the string used for the
+            comparison
 
         Returns
         -------
         pathlib.Path
             path to the downloaded file
         '''
+        green_checkmark = click.style('\u2713', fg='green', bold=True)
+        red_cross = click.style('\u2717', fg='red', bold=True)
+
         path = self._libpath / filename
         click.secho('Downloading: ', bold=True, nl=False)
         click.echo(url)
@@ -70,6 +94,21 @@ class ImageLibrary(abc.ABC):
                     t.update(len(data))
                 t.close()
 
+        if hash is not None:
+            block_size = 65536
+            hasher = _HASHES[hash[0]]()
+            with path.open('rb') as f:
+                data = f.read(block_size)
+                while len(data) > 0:
+                    hasher.update(data)
+                    data = f.read(block_size)
+
+            if hasher.hexdigest() == hash[1]:
+                click.echo(f'Hashes match...{green_checkmark}')
+            else:
+                click.echo(f'Hashes don\'t match...{red_cross}')
+                raise RuntimeError(f'Expected hash {hash[0]}, got {hasher.hexdigest()}')  # noqa: E501
+
         click.echo('Done...' + click.style('\u2713', fg='green'))
         click.secho('Saved to: ', bold=True, nl=False)
         click.echo(filename)
@@ -82,8 +121,10 @@ class CIFAR100Library(ImageLibrary):
         super().__init__('cifar100', folder=folder)
         tarball = self._download(
             'http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz',
-            'cifar-100-python.tar.gz')
-        self._unpack(tarball)
+            'cifar-100-python.tar.gz',
+            (HashType.MD5, 'eb9058c3a382ffc7106e4002c42a8d85'))
+        unpacked = self._unpack(tarball)
+        self._load_images(unpacked)
 
     def _unpack(self, archive: pathlib.Path) -> pathlib.Path:
         '''Unpack the archive file at the given path.
@@ -114,3 +155,25 @@ class CIFAR100Library(ImageLibrary):
             raise RuntimeError(f'Failed to unpack {archive}.')
 
         click.echo('Done...' + click.style('\u2713', fg='green', bold=True))
+        return path
+
+    def _load_images(self, unpacked: pathlib.Path):
+        '''Load the images from the CIFAR-100 files.
+
+        The files are standard Python pickle files.  Because they're relatively
+        small (~150 MB), this just loads everything into memory.  There isn't
+        really a point to store them on disk.
+
+        Parameters
+        ----------
+        unpacked : pathlib.Path
+            path to the unpacked archive
+        '''
+        meta = unpacked / 'meta'
+        train = unpacked / 'train'
+
+        with meta.open('rb') as f:
+            self._labels = pickle.load(f, encoding='latin1')
+
+        with train.open('rb') as f:
+            self._images = pickle.load(f, encoding='latin1')
