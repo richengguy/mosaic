@@ -69,7 +69,8 @@ class ImageLibrary(ABC, Mapping):
 
     def __getitem__(self, label: str) -> List[np.ndarray]:
         return [
-            self.get_image(index) for index in self.get_indices_for_label(label)  # noqa: E501
+            self.get_image(index)
+            for index in self.get_indices_for_label(label)
         ]
 
     def __iter__(self) -> Iterator[List[np.ndarray]]:
@@ -206,7 +207,10 @@ class CIFAR100Library(ImageLibrary):
         self._load_images(unpacked)
         self._names = self._labels['coarse_label_names']  # type: List[str]
         self._label_set = frozenset(self._names)
-        self._ids = {i: name for i, name in enumerate(self._labels['coarse_label_names'])}  # noqa: E501
+        self._ids = {
+            i: name
+            for i, name in enumerate(self._labels['coarse_label_names'])
+        }
 
     def number_of_images(self):
         return len(self._images['data'])
@@ -222,7 +226,7 @@ class CIFAR100Library(ImageLibrary):
         if label not in self:
             raise KeyError(f'Unknown label {label}.')
 
-        target = self._names.index(label, 0, -1)
+        target = self._names.index(label, 0, len(self._names))
         return [
             image for image, label in enumerate(self._images['coarse_labels'])
             if label == target
