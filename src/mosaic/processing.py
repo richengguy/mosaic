@@ -1,8 +1,11 @@
 import pathlib
 import pickle
-from typing import List, Tuple
+from typing import List, Tuple, Iterator
 
+import click
+import hnswlib  # type: ignore
 import numpy as np
+import tqdm  # type: ignore
 
 
 def _svd(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -43,6 +46,45 @@ def _svd(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     Vt *= signs[:, np.newaxis]
 
     return U, S, Vt
+
+
+def assemble_image(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
+    '''Assemble a mosaic image from a grid and the set of images.
+
+    Parameters
+    ----------
+    grid : np.ndarray
+        a MxN array containing image IDs for each tile location
+    images : List[np.ndarray]
+        list of image tiles
+
+    Returns
+    -------
+    np.ndarray
+        a HxW image generated from the original input list
+    '''
+    tile_height, tile_width, _ = images[0].shape
+    out_height = grid.shape[0]*tile_height
+    out_width = grid.shape[1]*tile_width
+
+    output = np.zeros((out_height, out_width, 3), dtype=np.uint8)
+
+    progress = tqdm.tqdm(total=tile_width*tile_height)
+    for r in range(grid.shape[0]):
+        for c in range(grid.shape[1]):
+            r_start = r*tile_height
+            c_start = c*tile_width
+
+            r_end = r_start + tile_height
+            c_end = c_start + tile_width
+
+            output[r_start:r_end, c_start:c_end, :] = images[grid[r,c]]
+
+            progress.update(1)
+
+    progress.close()
+
+    return output
 
 
 class FeatureGenerator(object):
@@ -122,7 +164,7 @@ class FeatureGenerator(object):
         # Scale to the same range as the "training" data.
         x = (x - self.mean) / self.stddev
 
-        return x @ self.principal_components
+        return x @ self.principal_components.T
 
     @property
     def dimensionality(self) -> int:
@@ -154,3 +196,106 @@ class FeatureGenerator(object):
         '''
         with path.open('rb') as f:
             return pickle.load(f)
+
+
+class MosaicGenerator(object):
+    '''Generate photomosaics from image databases.'''
+
+    class _Tiles(object):
+        '''Used to generate the tiles for a particular image.'''
+        def __init__(self, image: np.ndarray, tile_size: Tuple[int, int]):
+            height, width, _ = image.shape
+
+            self._image = image
+            self._tilesize = tile_size
+
+            self._tiles_x = width // tile_size[0]
+            self._tiles_y = height // tile_size[1]
+
+            self._output_width = self._tiles_x*tile_size[0]
+            self._output_height = self._tiles_y*tile_size[1]
+
+            delta_width = width - self._output_width
+            delta_height = height - self._output_height
+
+            self._x_start = delta_width // 2
+            self._y_start = delta_height // 2
+
+            self._x_end = (width - 1) - (delta_width // 2)
+            self._y_end = (height - 1) - (delta_height // 2)
+
+        def __len__(self) -> int:
+            return self._tiles_x*self._tiles_y
+
+        def __iter__(self) -> Iterator[Tuple[int, int, np.ndarray]]:
+            height, width = self._tilesize
+            for r in range(self._tiles_y):
+                for c in range(self._tiles_x):
+                    r_start = r*height
+                    c_start = c*width
+
+                    r_end = r_start + height
+                    c_end = c_start + width
+
+                    yield r, c, self._image[r_start:r_end, c_start:c_end, :]
+
+        @property
+        def grid_size(self) -> Tuple[int, int]:
+            '''Size of the tile grid.
+
+            Returns
+            -------
+            grid_rows : int
+                number of grid rows
+            grid_cols : int
+                number of grid columns
+            '''
+            return self._tiles_y, self._tiles_x
+
+        @property
+        def output_size(self) -> Tuple[int, int, int]:
+            '''Size of the final output image.
+
+            Returns
+            -------
+            height, width, channels : int
+                the image output size.
+            '''
+            return self._output_height, self._output_width, self._image.shape[2]  # noqa: E501
+
+    def __init__(self, features: FeatureGenerator, indexer: hnswlib.Index,
+                 tile_size: Tuple[int, int]):
+        self._features = features
+        self._indexer = indexer
+        self._tile_size = tile_size
+
+    def generate(self, image: np.ndarray) -> np.ndarray:
+        '''Generate a mosaic for the given image.
+
+        Parameters
+        ----------
+        image : np.ndarray
+            input RGB image
+
+        Returns
+        -------
+        np.ndarray
+            a 2D array where each element is an ID into the image library; this
+            can then be used to assemble the final mosiac
+        '''
+        tiles = MosaicGenerator._Tiles(image, self._tile_size)
+
+        click.echo(click.style('Tile Size: ', bold=True) +
+                   f'{self._tile_size[0]}x{self._tile_size[1]}')
+        click.echo(click.style('Grid Size: ', bold=True) +
+                   f'{tiles.grid_size[0]}x{tiles.grid_size[1]}')
+        click.echo(click.style('Expected Output Size: ', bold=True) +
+                   f'{tiles.output_size[0]}x{tiles.output_size[1]}')
+
+        output = np.zeros(tiles.grid_size, dtype=int)
+        for r, c, tile in tqdm.tqdm(tiles, unit='tile'):
+            desc = self._features.compute(tile)
+            index, _ = self._indexer.knn_query(desc)
+            output[r, c] = np.squeeze(index)
+
+        return output

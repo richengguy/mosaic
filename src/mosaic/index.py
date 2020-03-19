@@ -2,7 +2,7 @@ import pathlib
 from typing import Dict, List, Optional, Union
 
 import click
-import hnswlib
+import hnswlib  # type: ignore
 import numpy as np
 
 from mosaic.imagelibrary import ImageLibrary
@@ -26,8 +26,10 @@ class Category(object):
         the kNN indexing data structure
     descriptors : FeatureGenerator
         object used for generating feature descriptors for the image collection
+    tile_size : (height, width)
+        image/tile size of images in this category
     '''
-    def __init__(self, images: List[np.ndarray], dimensionality: int = 128):
+    def __init__(self, images: List[np.ndarray], dimensionality: int = 256):
         click.echo(f' - Generating image features', nl=False)
         self.descriptors = FeatureGenerator(images, dimensionality)
         click.echo(f'...{_GREEN_CHECKMARK}')
@@ -37,6 +39,8 @@ class Category(object):
         self.indexer.init_index(max_elements=len(images))
         self.indexer.add_items(self.descriptors.descriptors)
         click.echo(f'...{_GREEN_CHECKMARK}')
+
+        self.tile_size = images[0].shape[0:2]
 
 
 class Index(object):
@@ -51,7 +55,7 @@ class Index(object):
     initialized : bool
         if ``False`` then the index has not been built yet
     '''
-    def __init__(self, ndim: int = 128):
+    def __init__(self, ndim: int = 256):
         '''
         Parameters
         ----------
@@ -103,3 +107,14 @@ class Index(object):
             descr_file = folder / f'{label}.descriptors'
             category.indexer.save_index(index_file.as_posix())
             category.descriptors.save(descr_file)
+
+    @staticmethod
+    def load(library: ImageLibrary, label: str):
+        index_file = library._libpath / f'{label}.index'
+        descr_file = library._libpath / f'{label}.descriptors'
+
+        indexer = hnswlib.Index('l2', 256)
+        indexer.load_index(index_file.as_posix())
+        descriptors = FeatureGenerator.load(descr_file)
+
+        return indexer, descriptors
