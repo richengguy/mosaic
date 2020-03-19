@@ -1,3 +1,5 @@
+import pathlib
+import pickle
 from typing import List, Tuple
 
 import numpy as np
@@ -129,3 +131,26 @@ class FeatureGenerator(object):
     @property
     def input_features(self) -> int:
         return self._input_features
+
+    def save(self, path: pathlib.Path):
+        '''Save the descriptor structure to disk.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            path where the descriptor should be stored
+        '''
+        with path.open('wb') as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def load(path: pathlib.Path):
+        '''Load the descriptor structure from disk.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            path to the where the discriptors are stored
+        '''
+        with path.open('rb') as f:
+            return pickle.load(f)

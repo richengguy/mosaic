@@ -80,6 +80,10 @@ class ImageLibrary(ABC, Mapping):
     def __len__(self) -> int:
         return len(self.labels)
 
+    @property
+    def library_path(self) -> pathlib.Path:
+        return self._libpath
+
     @abstractmethod
     def get_image(self, index: int) -> np.ndarray:
         '''Get an image from the library.

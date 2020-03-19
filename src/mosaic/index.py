@@ -1,4 +1,5 @@
-from typing import Dict, List
+import pathlib
+from typing import Dict, List, Optional, Union
 
 import click
 import hnswlib
@@ -9,6 +10,7 @@ from mosaic.processing import FeatureGenerator
 
 _GREEN_CHECKMARK = click.style('\u2713', fg='green', bold=True)
 _RED_CROSS = click.style('\u2717', fg='red', bold=True)
+PathLike = Union[str, pathlib.Path]
 
 
 class Category(object):
@@ -63,7 +65,7 @@ class Index(object):
     def initialized(self) -> bool:
         return len(self._indices) != 0
 
-    def build(self, library: ImageLibrary):
+    def build(self, library: ImageLibrary, labels: Optional[List[str]] = None):
         '''Build the index from the given library.
 
         One index is built for each category/class within the library.
@@ -72,9 +74,32 @@ class Index(object):
         ----------
         library : ImageLibrary
             the input image library
+        labels : List[str], optional
+            if provided, only generate indices for these labels
         '''
         click.secho('Building Library Index', bold=True)
         click.echo('----')
-        for label in library.labels:
+
+        if labels is None:
+            categories = library.labels
+        else:
+            categories = frozenset(labels)
+
+        for label in categories:
             click.secho(f'{label}:', bold=True)
             self._indices[label] = Category(library[label])
+
+    def save(self, folder: PathLike):
+        '''Save the index to disk.
+
+        Parameters
+        ----------
+        folder : PathLike
+            folder to where the indices should be stored
+        '''
+        folder = pathlib.Path(folder)
+        for label, category in self._indices.items():
+            index_file = folder / f'{label}.index'
+            descr_file = folder / f'{label}.descriptors'
+            category.indexer.save_index(index_file.as_posix())
+            category.descriptors.save(descr_file)
