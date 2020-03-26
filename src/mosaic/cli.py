@@ -14,17 +14,23 @@ def main(ctx: click.Context):
 
 
 @main.command()
+@click.option('-d', '--dimensionality', nargs=1, default=128,
+              help='Number of dimensions in the database feature space.')
 @click.option('-l', '--label', 'labels', nargs=1, multiple=True,
               help='Specific labels to build the indices for.')
 @click.pass_obj
-def build_index(library: ImageLibrary, labels):
+def build_index(library: ImageLibrary, dimensionality: int, labels):
     '''Build the database indices needed for the photomosaic.
 
     The photomosaic needs to perform multiple look ups to find the best
     matching image for any image patch.  This will generate the indices for the
     given library.
     '''
-    index = Index()
+    index = Index(ndim=dimensionality)
+    if len(labels) == 0:
+        click.secho('Warning: ', fg='yellow', bold=True, nl=False)
+        click.echo('Building a complete index; this may take a while.')
+        labels = None
     index.build(library, labels)
     index.save(library.library_path)
 

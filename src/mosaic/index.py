@@ -83,6 +83,7 @@ class Index(object):
         '''
         click.secho('Building Library Index', bold=True)
         click.echo('----')
+        click.echo(click.style('Feature Size: ', bold=True) + f'{self._ndim}')
 
         if labels is None:
             categories = library.labels

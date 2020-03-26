@@ -78,7 +78,7 @@ def assemble_image(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
             r_end = r_start + tile_height
             c_end = c_start + tile_width
 
-            output[r_start:r_end, c_start:c_end, :] = images[grid[r,c]]
+            output[r_start:r_end, c_start:c_end, :] = images[grid[r, c]]
 
             progress.update(1)
 
