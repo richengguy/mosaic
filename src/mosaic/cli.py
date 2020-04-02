@@ -68,7 +68,7 @@ def generate(library: ImageLibrary, label, image):
 
     plt.show()
 
-    mpimg.imsave(f'{image}-mosaic.jpg', output)
+    mpimg.imsave(f'{image}-mosaic.png', output)
 
 
 if __name__ == '__main__':
