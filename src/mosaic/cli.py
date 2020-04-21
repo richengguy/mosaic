@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt  # type: ignore
 
 from mosaic.imagelibrary import ImageLibrary, CIFAR100Library
 from mosaic.index import Index
-from mosaic.processing import MosaicGenerator, assemble_image
+from mosaic.processing import (MosaicGenerator, assemble_mosiac,
+                               assemble_source_grid)
 
 
 @click.group()
@@ -45,11 +46,14 @@ def labels(library: ImageLibrary):
 
 
 @main.command()
+@click.option('-g', '--source-grid', 'show_grid', is_flag=True,
+              help='Generate a grid showing all unique source images alongside'
+                   ' the mosaic.')
 @click.argument('label', nargs=1)
 @click.argument('image', nargs=1,
                 type=click.Path(exists=True, file_okay=True, dir_okay=False))
 @click.pass_obj
-def generate(library: ImageLibrary, label, image):
+def generate(library: ImageLibrary, show_grid: bool, label, image):
     '''Generate a photomosaic for the given image.'''
     original = mpimg.imread(image)
 
@@ -59,16 +63,21 @@ def generate(library: ImageLibrary, label, image):
     tiles = mosaic.generate(original)
 
     # Generate output
-    output = assemble_image(tiles, library[label])
+    output = assemble_mosiac(tiles, library[label])
 
     plt.imshow(tiles)
 
     plt.figure()
     plt.imshow(output)
 
-    plt.show()
+    if show_grid:
+        image_grid = assemble_source_grid(tiles, library[label], 16, 3.25)
+        mpimg.imsave(f'{image}-source.png', image_grid)
+        plt.figure()
+        plt.imshow(image_grid)
 
     mpimg.imsave(f'{image}-mosaic.png', output)
+    plt.show()
 
 
 if __name__ == '__main__':
