@@ -5,6 +5,7 @@ from typing import List, Tuple, Iterator
 import click
 import hnswlib  # type: ignore
 import numpy as np
+import scipy.ndimage
 import tqdm  # type: ignore
 
 
@@ -48,7 +49,7 @@ def _svd(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return U, S, Vt
 
 
-def assemble_image(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
+def assemble_mosiac(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
     '''Assemble a mosaic image from a grid and the set of images.
 
     Parameters
@@ -69,7 +70,8 @@ def assemble_image(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
 
     output = np.zeros((out_height, out_width, 3), dtype=np.uint8)
 
-    progress = tqdm.tqdm(total=tile_width*tile_height)
+    progress = tqdm.tqdm(total=grid.shape[0]*grid.shape[1],
+                         desc='Assembling mosaic', unit='tile')
     for r in range(grid.shape[0]):
         for c in range(grid.shape[1]):
             r_start = r*tile_height
@@ -79,6 +81,88 @@ def assemble_image(grid: np.ndarray, images: List[np.ndarray]) -> np.ndarray:
             c_end = c_start + tile_width
 
             output[r_start:r_end, c_start:c_end, :] = images[grid[r, c]]
+
+            progress.update(1)
+
+    progress.close()
+
+    return output
+
+
+def assemble_source_grid(grid: np.ndarray, images: List[np.ndarray],
+                         margin: int, scale: float = 1.0) -> np.ndarray:
+    '''Assemble an image grid showing the unique source images for a mosaic.
+
+    The output image grid attempts to maintain the same size as the photomosaic
+    when its generated via :func:`assemble_image`.
+
+    Parameters
+    ----------
+    grid : np.ndarray
+        an MxN array containing image IDs for each tile location
+    images : List[np.ndarray]
+        list of image tiles
+    margin : int
+        margin around each image
+    scale : float, optional
+        scale the tile images by some amount, defaults to '1' or no scaling
+
+    Returns
+    -------
+    np.ndarray
+        an image grid of all unique images in the photomosaic, sorted by ID
+    '''
+    # Compute the mosaic dimensions.
+    mosiac_height = grid.shape[0]*images[0].shape[0]
+    mosiac_width = grid.shape[1]*images[1].shape[1]
+
+    # Compute the size of the output tiles.
+    if scale > 1.0:
+        shape = scipy.ndimage.zoom(images[0], (scale, scale, 1)).shape
+    else:
+        shape = images[0].shape
+
+    tile_height, tile_width, _ = shape
+
+    # Compute the image grid dimensions
+    cell_height = tile_height + margin
+    cell_width = tile_width + margin
+
+    ids = np.unique(grid)
+    N = len(ids)
+
+    cols = mosiac_width // cell_width
+    rows = int(np.ceil(N / cols))
+
+    # Compute the output size and various offsets
+    output_height = max(rows*cell_height, mosiac_height)
+    output_width = max(cols*cell_width, mosiac_width)
+
+    padding = int(margin / 2)
+    centering_offset = (output_width - cols*cell_width) // 2
+
+    # Render the grid.
+    output = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+    output[:] = 255
+
+    progress = tqdm.tqdm(total=N, desc='Assembling source grid', unit='tile')
+    for r in range(rows):
+        for c in range(cols):
+            i = c + r*cols
+            if i == N:
+                break
+
+            tile = images[ids[i]]
+            if scale > 1.0:
+                tile = scipy.ndimage.zoom(tile, (scale, scale, 1))
+
+            r_start = r*(tile_height + margin) + padding
+            c_start = c*(tile_width + margin) + padding + centering_offset
+
+            r_end = r_start + tile_height
+            c_end = c_start + tile_width
+
+            output[r_start:r_end, c_start:c_end, :] = tile
 
             progress.update(1)
 
@@ -293,7 +377,7 @@ class MosaicGenerator(object):
                    f'{tiles.output_size[0]}x{tiles.output_size[1]}')
 
         output = np.zeros(tiles.grid_size, dtype=int)
-        for r, c, tile in tqdm.tqdm(tiles, unit='tile'):
+        for r, c, tile in tqdm.tqdm(tiles, unit='tile', desc='Finding tiles'):
             desc = self._features.compute(tile)
             index, _ = self._indexer.knn_query(desc)
             output[r, c] = np.squeeze(index)
