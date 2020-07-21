@@ -1,8 +1,8 @@
 import click
-import matplotlib.image as mpimg  # type: ignore
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
-from mosaic.imagelibrary import ImageLibrary, CIFAR100Library
+from mosaic.imagelibrary import CIFAR100Library, ImageLibrary
 from mosaic.index import Index
 from mosaic.processing import (MosaicGenerator, assemble_mosiac,
                                assemble_source_grid)
