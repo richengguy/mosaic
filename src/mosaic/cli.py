@@ -1,6 +1,5 @@
 import click
 import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 
 from mosaic.imagelibrary import CIFAR100Library, ImageLibrary
 from mosaic.index import Index
@@ -58,26 +57,21 @@ def generate(library: ImageLibrary, show_grid: bool, label, image):
     original = mpimg.imread(image)
 
     # Find tiles
-    indexer, descriptors = Index.load(library, label)
-    mosaic = MosaicGenerator(descriptors, indexer, (32, 32))
-    tiles = mosaic.generate(original)
+    try:
+        indexer, descriptors = Index.load(library, label)
+        mosaic = MosaicGenerator(descriptors, indexer, (32, 32))
+        tiles = mosaic.generate(original)
+    except RuntimeError as e:
+        raise click.ClickException(str(e)) from e
 
     # Generate output
     output = assemble_mosiac(tiles, library[label])
 
-    plt.imshow(tiles)
-
-    plt.figure()
-    plt.imshow(output)
-
     if show_grid:
         image_grid = assemble_source_grid(tiles, library[label], 16, 3.25)
         mpimg.imsave(f'{image}-source.png', image_grid)
-        plt.figure()
-        plt.imshow(image_grid)
 
     mpimg.imsave(f'{image}-mosaic.png', output)
-    plt.show()
 
 
 if __name__ == '__main__':

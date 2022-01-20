@@ -114,6 +114,9 @@ class Index(object):
         index_file = library._libpath / f'{label}.index'
         descr_file = library._libpath / f'{label}.descriptors'
 
+        if not index_file.exists():
+            raise RuntimeError(f"Could not find an index for '{label}' label.")
+
         indexer = hnswlib.Index('l2', 256)
         indexer.load_index(index_file.as_posix())
         descriptors = FeatureGenerator.load(descr_file)
