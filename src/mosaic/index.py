@@ -30,11 +30,11 @@ class Category(object):
         image/tile size of images in this category
     '''
     def __init__(self, images: List[np.ndarray], dimensionality: int = 256):
-        click.echo(f' - Generating image features', nl=False)
+        click.echo(' - Generating image features', nl=False)
         self.descriptors = FeatureGenerator(images, dimensionality)
         click.echo(f'...{_GREEN_CHECKMARK}')
 
-        click.echo(f' - Building search index', nl=False)
+        click.echo(' - Building search index', nl=False)
         self.indexer = hnswlib.Index('l2', dimensionality)
         self.indexer.init_index(max_elements=len(images))
         self.indexer.add_items(self.descriptors.descriptors)
@@ -113,6 +113,9 @@ class Index(object):
     def load(library: ImageLibrary, label: str):
         index_file = library._libpath / f'{label}.index'
         descr_file = library._libpath / f'{label}.descriptors'
+
+        if not index_file.exists():
+            raise RuntimeError(f"Could not find an index for '{label}' label.")
 
         indexer = hnswlib.Index('l2', 256)
         indexer.load_index(index_file.as_posix())
