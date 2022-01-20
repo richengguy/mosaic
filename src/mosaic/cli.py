@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import click
 import matplotlib.image as mpimg
 
@@ -67,11 +69,13 @@ def generate(library: ImageLibrary, show_grid: bool, label, image):
     # Generate output
     output = assemble_mosiac(tiles, library[label])
 
+    image_path = Path(image)
+
     if show_grid:
         image_grid = assemble_source_grid(tiles, library[label], 16, 3.25)
-        mpimg.imsave(f'{image}-source.png', image_grid)
+        mpimg.imsave(f'{image_path.stem}-source.png', image_grid)
 
-    mpimg.imsave(f'{image}-mosaic.png', output)
+    mpimg.imsave(f'{image_path.stem}-mosaic.png', output)
 
 
 if __name__ == '__main__':
