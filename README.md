@@ -12,9 +12,9 @@ tiles.  For example,
 [mosaic-thumb]: docs/branch-mosaic-thumb.jpg "Mosaic Thumbnail"
 [mosaic-full]: docs/branch-mosaic.jpg
 
-It was originally created as part of a photography course project so it doesn't
-have that many features beyond specifying the image to generate a mosiac for.
-In fact, the way it's currently built will only let it generate mosaics from the
+It was originally created as part of a photography course project.  Aside from
+generating/rendering the mosaic, it doesn't really have that many features. In
+fact, the way it's currently built will only let you generate mosaics from the
 [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.  It's
 extendable, but I (the author) don't have any plans to update it.
 
@@ -70,7 +70,8 @@ mosaic using the "trees" label:
 mosaic generate trees my-image.jpg
 ```
 
-This will generate a "my-image-mosaic.png" file.
+This will generate a "my-image-mosaic.png" file in the *same folder as the
+source image*.
 
 ## How it works
 
@@ -100,14 +101,14 @@ Once you have a source image, the mosaic generation algoirhtm is:
 
 ## Why CIFAR?
 
-I choose CIFAR-100 because it's a relatively small database.  I didn't need a
-large and comprehensive training dataset for the photography project.  CIFAR-100
-was large enough to have some variety in the images without needing to download
-gigabytes of data.
-
 The project was to highlight how labelling decisions in ML systems are, at the
 end of the day, choices made by people.  Ignoring unsupervised learning (not in
 scope), the decision of what consitutes a "tree" superclass in the CIFAR-100
 dataset is somewhat arbitrary.  This is meant to be visually represented by the
 mosaic.  So, in the example above, it's a picture of a tree branch that's
 comprised of tiles of what someone *else* thought was tree.
+
+I chose CIFAR-100 because it's a relatively small dataset.  I didn't need a
+large and comprehensive ML dataset for the course project.  CIFAR-100 was large
+enough to have some variety in the images without needing to download gigabytes
+of data.  Basically it was enough for what I needed.
