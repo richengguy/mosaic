@@ -1,14 +1,16 @@
 # mosaic
 "mosaic" is a small Python library/app to generate photographic mosaics.  This
-is where you take an original image, like
+is where you take an original image and turn it into a composition of image
+tiles.  For example,
 
-![Original Thumbnail](docs/branch-thumb.jpg)
 
-and turn it into
+| Original | Mosaic (Click to see full-sized version) |
+| -------- | ------- |
+| ![original-thumb] | [![mosaic-thumb]][mosaic-full] |
 
-[![Mosaic Thumbnail](docs/branch-mosaic-thumb.jpg)](docs/branch-mosaic.jpg)
-
-(Click on the image to see the full-sized version.)
+[original-thumb]: docs/branch-thumb.jpg "Original Thumbnail"
+[mosaic-thumb]: docs/branch-mosaic-thumb.jpg "Mosaic Thumbnail"
+[mosaic-full]: docs/branch-mosaic.jpg
 
 It was originally created for a photography project so it doesn't have that many
 features beyond specifying the image to generate a mosiac for.  In fact, the way
