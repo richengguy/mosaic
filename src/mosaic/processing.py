@@ -5,7 +5,7 @@ from typing import List, Tuple, Iterator
 import click
 import hnswlib  # type: ignore
 import numpy as np
-import scipy.ndimage
+import scipy.ndimage  # type: ignore
 import tqdm  # type: ignore
 
 
@@ -256,7 +256,7 @@ class FeatureGenerator(object):
 
     @property
     def input_features(self) -> int:
-        return self._input_features
+        return self._input_features  # type: ignore
 
     def save(self, path: pathlib.Path):
         '''Save the descriptor structure to disk.
