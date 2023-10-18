@@ -1,0 +1,22 @@
+name: Run Tests
+
+on: [pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          conda env create
+
+      - name: Run linter
+        run: |
+          conda run -n mosaic --live-stream flake8 src
+          conda run -n mosaic --live-stream mypy src
+
+      - name: Run basic test (list all library labels)
+        run: |
+          conda run -n mosaic --live-stream mosaic labels
