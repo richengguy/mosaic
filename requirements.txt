@@ -2,7 +2,7 @@ click==8.1.7
 hnswlib==0.7.0
 matplotlib==3.8.0
 numpy==1.26.1
-Pillow==10.1.0
+Pillow==10.3.0
 requests==2.31.0
 scipy==1.11.3
 tqdm==4.66.1
