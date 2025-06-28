@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mosaic"
-version = "1.0.3"
+version = "1.0.4"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 description = "A simple-ish photographic mosaic generation library."
