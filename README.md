@@ -21,20 +21,18 @@ extendable, but I (the author) don't have any plans to update it.
 ## Installation
 
 The only real requirement for "mosaic" is to make sure you have
-[conda](https://docs.conda.io/en/latest/) available on your system.  The
-environment and dependencies are specified in [environment.yml](environment.yml)
-and [requirements.txt](requirements.txt), respectively.
+[uv](https://docs.astral.sh/uv/) available on your system.
 
-To setup the conda/Python environment, just run:
+Just run the line below to setup the Python environment:
 
 ```bash
-$ conda env create
+uv sync
 ```
 
-Once done, use
+Use
 
-```
-$ conda activate mosaic
+```bash
+source .venv/bin/activate
 ```
 
 to activate it.
@@ -54,8 +52,8 @@ The feature database index needs to be built before the mosaics are generated.
 You can generate it for all labels or for just one.  For example, to build an
 index for trees:
 
-```
-$ mosaic build-index -l trees
+```bash
+mosaic build-index -l trees
 ```
 
 The index is cached in the "libraries" folder and only needs to be generated
@@ -66,7 +64,7 @@ once.
 Rendering mosaics is done with `mosaic generate`.  For example, to render a
 mosaic using the "trees" label:
 
-```
+```bash
 mosaic generate trees my-image.jpg
 ```
 
