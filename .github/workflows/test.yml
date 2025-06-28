@@ -8,16 +8,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup environment
-        run: |
-          conda env create
+      - name: Setup 'uv'
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.7.16"
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Sync dependencies
+        run: uv sync --only-dev
 
       - name: Run linter
         run: |
-          conda run -n mosaic --live-stream pip install -e .[dev]
-          conda run -n mosaic --live-stream flake8 src
-          conda run -n mosaic --live-stream mypy src
+          uv run flake8 src
+          uv run mypy src
 
       - name: Run basic test (list all library labels)
         run: |
-          conda run -n mosaic --live-stream mosaic labels
+          uv run mosaic labels
